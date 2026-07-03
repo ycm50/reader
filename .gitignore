@@ -29,9 +29,6 @@ package-lock.json
 .vscode
 # Gradle
 .gradle/
-gradle/
-gradlew
-gradlew.bat
 # Output APK
 *.apk
 *.aab
@@ -51,8 +48,4 @@ Thumbs.db
 .reasonix/
 # Cross-drive symlink artifacts
 /a/
-# Temp files
 /tmp/
-*.py
-!gradlew
-!gradlew.bat
