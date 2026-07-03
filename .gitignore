@@ -3,10 +3,19 @@
 local.properties
 .DS_Store
 /build
-build/
+/build/
+/app/build/
+/app/build
+/release
+/release/
+/app/release/
+/app/release
+/debug
+/debug/
+/app/debug/
+/app/debug
 /captures
 .externalNativeBuild
-/release
 /tmp
 node_modules/
 /app/app
@@ -18,3 +27,32 @@ package-lock.json
 .kotlin/
 .cxx
 .vscode
+# Gradle
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+# Output APK
+*.apk
+*.aab
+*.jks
+*.keystore
+# Local
+local.properties
+# IDE
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+# Modules
+/modules/*/build/
+# AI workspace
+.reasonix/
+# Cross-drive symlink artifacts
+/a/
+# Temp files
+/tmp/
+*.py
+!gradlew
+!gradlew.bat

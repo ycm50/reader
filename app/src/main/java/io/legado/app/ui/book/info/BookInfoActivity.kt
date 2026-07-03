@@ -28,17 +28,12 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityBookInfoBinding
-import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppWebDav
 import io.legado.app.help.GlideImageGetter
 import io.legado.app.help.TextViewTagHandler
 import io.legado.app.help.book.addType
-import io.legado.app.help.book.getRemoteUrl
-import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalTxt
-import io.legado.app.help.book.isVideo
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
@@ -50,23 +45,16 @@ import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.bottomBackground
 import io.legado.app.lib.theme.getPrimaryTextColor
 import io.legado.app.model.BookCover
-import io.legado.app.model.remote.RemoteBookWebDav
-import io.legado.app.ui.about.AppLogDialog
-import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.book.changesource.ChangeBookSourceDialog
 import io.legado.app.ui.book.group.GroupSelectDialog
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
-import io.legado.app.ui.book.manga.ReadMangaActivity
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.ReadBookActivity.Companion.RESULT_DELETED
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.model.SourceCallBack
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.file.HandleFileContract
-import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.video.VideoPlayerActivity
 import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
@@ -157,19 +145,6 @@ class BookInfoActivity :
             viewModel.upEditBook()
         }
     }
-    private val editSourceResult = registerForActivityResult(
-        StartActivityContract(BookSourceEditActivity::class.java)
-    ) {
-        if (it.resultCode == RESULT_CANCELED) {
-            return@registerForActivityResult
-        }
-        book?.let { book ->
-            viewModel.bookSource = appDb.bookSourceDao.getBookSource(book.origin)?.also { source ->
-                viewModel.hasCustomBtn = source.customButton
-            }
-            viewModel.refreshBook(book)
-        }
-    }
     private var chapterChanged = false
     private val waitDialog by lazy { WaitDialog(this) }
     private var editMenuItem: MenuItem? = null
@@ -237,8 +212,6 @@ class BookInfoActivity :
             viewModel.bookData.value?.canUpdate ?: true
         menu.findItem(R.id.menu_split_long_chapter)?.isChecked =
             viewModel.bookData.value?.getSplitLongChapter() ?: true
-        menu.findItem(R.id.menu_login)?.isVisible =
-            !viewModel.bookSource?.loginUrl.isNullOrBlank()
         menu.findItem(R.id.menu_set_source_variable)?.isVisible =
             viewModel.bookSource != null
         menu.findItem(R.id.menu_set_book_variable)?.isVisible =
@@ -247,8 +220,6 @@ class BookInfoActivity :
             viewModel.bookSource != null
         menu.findItem(R.id.menu_split_long_chapter)?.isVisible =
             viewModel.bookData.value?.isLocalTxt ?: false
-        menu.findItem(R.id.menu_upload)?.isVisible =
-            viewModel.bookData.value?.isLocal ?: false
         menu.findItem(R.id.menu_delete_alert)?.isChecked =
             LocalConfig.bookInfoDeleteAlert
         return super.onMenuOpened(featureId, menu)
@@ -303,14 +274,6 @@ class BookInfoActivity :
                 refreshBook()
             }
 
-            R.id.menu_login -> viewModel.bookSource?.let {
-                startActivity<SourceLoginActivity> {
-                    putExtra("type", "bookSource")
-                    putExtra("key", it.bookSourceUrl)
-                    putExtra("bookUrl", book?.bookUrl)
-                }
-            }
-
             R.id.menu_top -> viewModel.topBook()
             R.id.menu_set_source_variable -> setSourceVariable()
             R.id.menu_set_book_variable -> setBookVariable()
@@ -357,7 +320,6 @@ class BookInfoActivity :
                         viewModel.clearCache(it)
                     }
                 }
-            R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_split_long_chapter -> {
                 upLoading(true)
                 viewModel.getBook()?.let {
@@ -369,18 +331,6 @@ class BookInfoActivity :
             }
 
             R.id.menu_delete_alert -> LocalConfig.bookInfoDeleteAlert = !item.isChecked
-            R.id.menu_upload -> {
-                viewModel.getBook()?.let { book ->
-                    book.getRemoteUrl()?.let {
-                        alert(R.string.draw, R.string.sure_upload) {
-                            okButton {
-                                upLoadBook(book)
-                            }
-                            cancelButton()
-                        }
-                    } ?: upLoadBook(book)
-                }
-            }
         }
         return super.onCompatOptionsItemSelected(item)
     }
@@ -429,28 +379,6 @@ class BookInfoActivity :
         upLoading(true)
         viewModel.getBook()?.let {
             viewModel.loadChapter(it, true, isFromBookInfo = true)
-        }
-    }
-
-    private fun upLoadBook(
-        book: Book,
-        bookWebDav: RemoteBookWebDav? = AppWebDav.defaultBookWebDav,
-    ) {
-        lifecycleScope.launch {
-            waitDialog.setText("上传中.....")
-            waitDialog.show()
-            try {
-                bookWebDav
-                    ?.upload(book)
-                    ?: throw NoStackTraceException("未配置webDav")
-                //更新书籍最后更新时间,使之比远程书籍的时间新
-                book.lastCheckTime = System.currentTimeMillis()
-                viewModel.saveBook(book)
-            } catch (e: Exception) {
-                toastOnUi(e.localizedMessage)
-            } finally {
-                waitDialog.dismiss()
-            }
         }
     }
 
@@ -685,9 +613,7 @@ class BookInfoActivity :
                     toastOnUi(R.string.error_no_source)
                     return@let
                 }
-                editSourceResult.launch {
-                    putExtra("sourceUrl", book.origin)
-                }
+                toastOnUi("书源编辑已移除")
             }
         }
         tvChangeSource.setOnClickListener {
@@ -977,29 +903,15 @@ class BookInfoActivity :
     }
 
     private fun startReadActivity(book: Book) {
-        when {
-            book.isAudio -> readBookResult.launch(
-                Intent(this, AudioPlayActivity::class.java)
-                    .putExtra("bookUrl", book.bookUrl)
-                    .putExtra("inBookshelf", viewModel.inBookshelf)
+        readBookResult.launch(
+            Intent(
+                this,
+                ReadBookActivity::class.java
             )
-            book.isVideo -> readBookResult.launch(
-                Intent(this, VideoPlayerActivity::class.java)
-                    .putExtra("bookUrl", book.bookUrl)
-                    .putExtra("inBookshelf", viewModel.inBookshelf)
-            )
-
-            else -> readBookResult.launch(
-                Intent(
-                    this,
-                    if (!book.isLocal && book.isImage && AppConfig.showMangaUi) ReadMangaActivity::class.java
-                    else ReadBookActivity::class.java
-                )
-                    .putExtra("bookUrl", book.bookUrl)
-                    .putExtra("inBookshelf", viewModel.inBookshelf)
-                    .putExtra("chapterChanged", chapterChanged)
-            )
-        }
+                .putExtra("bookUrl", book.bookUrl)
+                .putExtra("inBookshelf", viewModel.inBookshelf)
+                .putExtra("chapterChanged", chapterChanged)
+        )
     }
 
     override val oldBook: Book?

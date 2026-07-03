@@ -6,7 +6,6 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
-import io.legado.app.help.DirectLinkUpload
 import io.legado.app.utils.*
 
 import java.io.File
@@ -21,15 +20,8 @@ class HandleFileViewModel(application: Application) : BaseViewModel(application)
         contentType: String,
         success: (url: String) -> Unit
     ) {
-        execute {
-            DirectLinkUpload.upLoad(fileName, file, contentType)
-        }.onSuccess {
-            success.invoke(it)
-        }.onError {
-            AppLog.put("上传文件失败\n${it.localizedMessage}", it)
-            it.printOnDebug()
-            errorLiveData.postValue(it.localizedMessage)
-        }
+        // DirectLinkUpload removed in stripped build
+        success.invoke("")
     }
 
     fun saveToLocal(uri: Uri, fileName: String, data: Any, success: (uri: Uri) -> Unit) {

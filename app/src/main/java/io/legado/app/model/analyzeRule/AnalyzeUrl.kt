@@ -3,7 +3,6 @@ package io.legado.app.model.analyzeRule
 import android.annotation.SuppressLint
 import android.util.Base64
 import androidx.annotation.Keep
-import androidx.media3.common.MediaItem
 import cn.hutool.core.codec.PercentCodec
 import cn.hutool.core.net.RFC3986
 import cn.hutool.core.util.HexUtil
@@ -20,9 +19,7 @@ import io.legado.app.help.CacheManager
 import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.JsExtensions
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.exoplayer.ExoPlayerHelper
 import io.legado.app.help.glide.GlideHeaders
-import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager
 import io.legado.app.help.http.CookieManager.mergeCookies
 import io.legado.app.help.http.CookieStore
@@ -443,37 +440,7 @@ class AnalyzeUrl(
         val strResponse: StrResponse
         try {
             if (this.useWebView && useWebView) {
-                strResponse = when (method) {
-                    RequestMethod.POST -> {
-                        val res = getClient().newCallStrResponse(retry) {
-                            addHeaders(headerMap)
-                            url(urlNoQuery)
-                            if (!encodedForm.isNullOrEmpty() || body.isNullOrBlank()) {
-                                postForm(encodedForm ?: "")
-                            } else {
-                                postJson(body)
-                            }
-                        }
-                        BackstageWebView(
-                            url = res.url,
-                            html = res.body,
-                            tag = source?.getKey(),
-                            javaScript = webJs ?: jsStr,
-                            sourceRegex = sourceRegex,
-                            headerMap = headerMap,
-                            delayTime = webViewDelayTime
-                        ).getStrResponse()
-                    }
-
-                    else -> BackstageWebView(
-                        url = url,
-                        tag = source?.getKey(),
-                        javaScript = webJs ?: jsStr,
-                        sourceRegex = sourceRegex,
-                        headerMap = headerMap,
-                        delayTime = webViewDelayTime
-                    ).getStrResponse()
-                }
+                throw UnsupportedOperationException("WebView is not available in this build")
             } else {
                 strResponse = getClient().newCallStrResponse(retry) {
                     addHeaders(headerMap)
@@ -770,10 +737,6 @@ class AnalyzeUrl(
         private val queryEncoder =
             RFC3986.UNRESERVED.orNew(PercentCodec.of("!$%&()*+,/:;=?@[\\]^`{|}"))
         val customIp by lazy { ConcurrentHashMap<String, String>() }
-        fun AnalyzeUrl.getMediaItem(): MediaItem {
-            setCookie()
-            return ExoPlayerHelper.createMediaItem(url, headerMap)
-        }
 
     }
 

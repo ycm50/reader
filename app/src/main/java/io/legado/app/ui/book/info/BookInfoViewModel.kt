@@ -19,7 +19,6 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.getRemoteUrl
@@ -30,8 +29,6 @@ import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.updateTo
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.lib.webdav.ObjectNotFoundException
-import io.legado.app.model.AudioPlay
 import io.legado.app.model.BookCover
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
@@ -39,7 +36,6 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.model.SourceCallBack
-import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.isContentScheme
@@ -142,18 +138,6 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         executeLazy(executeContext = IO) {
             if (book.isLocal) {
                 book.tocUrl = ""
-                book.getRemoteUrl()?.let {
-                    val bookWebDav = AppWebDav.defaultBookWebDav
-                        ?: throw NoStackTraceException("webDav没有配置")
-                    val remoteBook = bookWebDav.getRemoteBook(it)
-                    if (remoteBook == null) {
-                        book.origin = BookType.localTag
-                    } else if (remoteBook.lastModify > book.lastCheckTime) {
-                        val uri = bookWebDav.downloadRemoteBook(remoteBook)
-                        book.bookUrl = if (uri.isContentScheme()) uri.toString() else uri.path!!
-                        book.lastCheckTime = remoteBook.lastModify
-                    }
-                }
             } else {
                 val bs = bookSource ?: return@executeLazy
                 if (book.originName != bs.bookSourceName) {
@@ -161,15 +145,7 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                 }
             }
         }.onError {
-            when (it) {
-                is ObjectNotFoundException -> {
-                    book.origin = BookType.localTag
-                }
-
-                else -> {
-                    AppLog.put("下载远程书籍<${book.name}>失败", it)
-                }
-            }
+            AppLog.put("下载远程书籍<${book.name}>失败", it)
         }.onFinally {
             loadBookInfo(book, false)
         }.start()
@@ -425,8 +401,6 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
             book.save()
             if (ReadBook.book?.isSameNameAuthor(book) == true) {
                 ReadBook.book = book
-            } else if (AudioPlay.book?.isSameNameAuthor(book) == true) {
-                AudioPlay.book = book
             }
         }.onSuccess {
             success?.invoke()
@@ -457,8 +431,6 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                 }
                 if (ReadBook.book?.isSameNameAuthor(book) == true) {
                     ReadBook.book = book
-                } else if (AudioPlay.book?.isSameNameAuthor(book) == true) {
-                    AudioPlay.book = book
                 }
                 book.save()
                 SourceCallBack.callBackBook(SourceCallBack.ADD_BOOK_SHELF, bookSource, book)
@@ -531,11 +503,9 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         val source = bookSource ?: return
         val book = bookData.value ?: return
         execute {
-            val java = SourceLoginJsExtensions(activity, source)
             runScriptWithContext {
                 source.evalJS(click) {
                     put("result", null)
-                    put("java", java)
                     put("book", book)
                 }
             }

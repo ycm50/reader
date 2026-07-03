@@ -1,18 +1,10 @@
 package io.legado.app.model
 
-import android.content.Context
 import io.legado.app.R
-import io.legado.app.constant.IntentAction
-import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.help.CacheManager
-import io.legado.app.help.IntentData
-import io.legado.app.service.CheckSourceService
-import io.legado.app.utils.startService
 import splitties.init.appCtx
 
 object CheckSource {
-    var keyword = "我的"
-
     //校验设置
     var timeout = CacheManager.getLong("checkSourceTimeout") ?: 180000L
     var wSourceComment = CacheManager.get("wSourceComment")?.toBoolean() ?: true
@@ -23,28 +15,6 @@ object CheckSource {
     var checkCategory = CacheManager.get("checkCategory")?.toBoolean() ?: true
     var checkContent = CacheManager.get("checkContent")?.toBoolean() ?: true
     val summary get() = upSummary()
-
-    fun start(context: Context, sources: List<BookSourcePart>) {
-        val selectedIds = sources.map {
-            it.bookSourceUrl
-        }
-        IntentData.put("checkSourceSelectedIds", selectedIds)
-        context.startService<CheckSourceService> {
-            action = IntentAction.start
-        }
-    }
-
-    fun stop(context: Context) {
-        context.startService<CheckSourceService> {
-            action = IntentAction.stop
-        }
-    }
-
-    fun resume(context: Context) {
-        context.startService<CheckSourceService> {
-            action = IntentAction.resume
-        }
-    }
 
     fun putConfig() {
         CacheManager.put("checkSourceTimeout", timeout)

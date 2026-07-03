@@ -13,11 +13,9 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.RssArticle
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.CacheManager
 import io.legado.app.help.JsExtensions
-import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.getShareScope
 import io.legado.app.model.Debug
@@ -62,7 +60,7 @@ class AnalyzeRule(
 ) : JsExtensions {
 
     private val book get() = ruleData as? BaseBook
-    private val rssArticle get() = ruleData as? RssArticle
+        private val rssArticle get() = null
 
     private var chapter: BookChapter? = null
     private var nextChapterUrl: String? = null
@@ -172,22 +170,7 @@ class AnalyzeRule(
      * 获取webJs结果
      */
     private fun getWebJsResult(jsStr: String, result: Any): String {
-        if (isMainThread) {
-            error("webJs must be called on a background thread")
-        }
-        return runBlocking {
-            BackstageWebView(
-                url = baseUrl,
-                html = content.toString(),
-                javaScript = jsStr,
-                headerMap = getSource()?.getHeaderMap(true),
-                tag = getSource()?.getKey(),
-                cacheFirst = true,
-                timeout = 10000,
-                result = GSON.toJson(result),
-                isRule = true
-            ).getStrResponse().body.toString()
-        }
+        error("WebView is not available in this build")
     }
 
     /**

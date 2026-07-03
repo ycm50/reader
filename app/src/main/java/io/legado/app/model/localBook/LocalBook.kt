@@ -17,7 +17,6 @@ import io.legado.app.exception.EmptyFileException
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.exception.TocEmptyException
-import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.addType
@@ -33,8 +32,6 @@ import io.legado.app.help.book.isUmd
 import io.legado.app.help.book.removeLocalUriCache
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.AppConfig
-import io.legado.app.lib.webdav.WebDav
-import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
@@ -49,7 +46,6 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.printOnDebug
-import kotlinx.coroutines.runBlocking
 import org.apache.commons.text.StringEscapeUtils
 import splitties.init.appCtx
 import java.io.ByteArrayInputStream
@@ -82,7 +78,6 @@ object LocalBook {
             ?: let {
                 book.removeLocalUriCache()
                 val localArchiveUri = book.getArchiveUri()
-                val webDavUrl = book.getRemoteUrl()
                 if (localArchiveUri != null) {
                     // 重新导入对应的压缩包
                     importArchiveFile(localArchiveUri, book.originName) {
@@ -90,9 +85,6 @@ object LocalBook {
                     }.firstOrNull()?.let {
                         getBookInputStream(it)
                     }
-                } else if (webDavUrl != null && downloadRemoteBook(book)) {
-                    // 下载远程链接
-                    getBookInputStream(book)
                 } else {
                     null
                 }
@@ -482,47 +474,6 @@ object LocalBook {
             if (onLineBook.intro.isNullOrBlank()) localBook.intro else onLineBook.intro
         localBook.save()
         return localBook
-    }
-
-    //下载book对应的远程文件 并更新Book
-    private fun downloadRemoteBook(localBook: Book): Boolean {
-        val webDavUrl = localBook.getRemoteUrl()
-        if (webDavUrl.isNullOrBlank()) throw NoStackTraceException("Book file is not webDav File")
-        try {
-            AppConfig.defaultBookTreeUri
-                ?: throw NoBooksDirException()
-            // 兼容旧版链接
-            val webdav: WebDav = kotlin.runCatching {
-                WebDav.fromPath(webDavUrl)
-            }.getOrElse {
-                AppWebDav.authorization?.let { WebDav(webDavUrl, it) }
-                    ?: throw WebDavException("Unexpected defaultBookWebDav")
-            }
-            val inputStream = runBlocking {
-                webdav.downloadInputStream()
-            }
-            inputStream.use {
-                if (localBook.isArchive) {
-                    // 压缩包
-                    val archiveUri = saveBookFile(it, localBook.archiveName)
-                    val newBook = importArchiveFile(archiveUri, localBook.originName) { name ->
-                        name.contains(localBook.originName)
-                    }.first()
-                    localBook.origin = newBook.origin
-                    localBook.bookUrl = newBook.bookUrl
-                } else {
-                    // txt epub pdf umd
-                    val fileUri = saveBookFile(it, localBook.originName)
-                    localBook.bookUrl = FileDoc.fromUri(fileUri, false).toString()
-                    localBook.save()
-                }
-            }
-            return true
-        } catch (e: Exception) {
-            e.printOnDebug()
-            AppLog.put("自动下载webDav书籍失败", e)
-            return false
-        }
     }
 
 }

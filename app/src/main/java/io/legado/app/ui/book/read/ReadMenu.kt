@@ -37,7 +37,6 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
-import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.ConstraintModify
@@ -113,7 +112,7 @@ class ReadMenu @JvmOverloads constructor(
             inflate(R.menu.book_read_source)
             setOnMenuItemClickListener {
                 when (it.itemId) {
-                    R.id.menu_login -> callBack.showLogin()
+                    //R.id.menu_login -> callBack.showLogin()
                     R.id.menu_chapter_pay -> callBack.payAction()
                     R.id.menu_edit_source -> callBack.openSourceEditActivity()
                     R.id.menu_disable_source -> callBack.disableSource()
@@ -216,10 +215,6 @@ class ReadMenu @JvmOverloads constructor(
         fabNightTheme.setColorFilter(textColor)
         tvPre.setTextColor(textColor)
         tvNext.setTextColor(textColor)
-        ivCatalog.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-        tvCatalog.setTextColor(textColor)
-        ivReadAloud.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-        tvReadAloud.setTextColor(textColor)
         ivFont.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
         tvFont.setTextColor(textColor)
         ivSetting.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
@@ -412,17 +407,7 @@ class ReadMenu @JvmOverloads constructor(
             if (AppConfig.readUrlInBrowser) {
                 context.openUrl(tvChapterUrl.text.toString().substringBefore(",{"))
             } else {
-                Coroutine.async {
-                    context.startActivity<WebViewActivity> {
-                        val url = tvChapterUrl.text.toString()
-                        val bookSource = ReadBook.bookSource
-                        putExtra("title", tvChapterName.text)
-                        putExtra("url", url)
-                        putExtra("sourceOrigin", bookSource?.bookSourceUrl)
-                        putExtra("sourceName", bookSource?.bookSourceName)
-                        putExtra("sourceType", bookSource?.getSourceType())
-                    }
-                }
+                context.openUrl(tvChapterUrl.text.toString().substringBefore(",{"))
             }
         }
         val chapterViewLongClickListener = OnLongClickListener {
@@ -516,7 +501,7 @@ class ReadMenu @JvmOverloads constructor(
             override fun onStopTrackingTouch(seekBar: SeekBar) {
                 binding.vwMenuBg.setOnClickListener { runMenuOut() }
                 when (AppConfig.progressBarBehavior) {
-                    "page" -> ReadBook.skipToPage(seekBar.progress)
+                    "page" -> Unit // ReadBook.skipToPage removed
                     "chapter" -> {
                         if (confirmSkipToChapter) {
                             callBack.skipToChapter(seekBar.progress)
@@ -576,17 +561,6 @@ class ReadMenu @JvmOverloads constructor(
             }
         }
 
-        //朗读
-        llReadAloud.setOnClickListener {
-            runMenuOut {
-                callBack.onClickReadAloud()
-            }
-        }
-        llReadAloud.onLongClick {
-            runMenuOut {
-                callBack.showReadAloudDialog()
-            }
-        }
         //界面
         llFont.setOnClickListener {
             runMenuOut {
@@ -633,7 +607,7 @@ class ReadMenu @JvmOverloads constructor(
                 "page" -> {
                     ReadBook.curTextChapter?.let {
                         max = it.pageSize.minus(1)
-                        progress = ReadBook.durPageIndex
+                        progress = ReadBook.durChapterPos
                     }
                 }
 
@@ -683,11 +657,8 @@ class ReadMenu @JvmOverloads constructor(
         fun openBookInfoActivity()
         fun showReadStyle()
         fun showMoreSetting()
-        fun showReadAloudDialog()
         fun upSystemUiVisibility()
-        fun onClickReadAloud()
         fun showHelp()
-        fun showLogin()
         fun payAction()
         fun disableSource()
         fun skipToChapter(index: Int)

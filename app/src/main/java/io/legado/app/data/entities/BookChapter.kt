@@ -10,7 +10,6 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
 import io.legado.app.exception.RegexTimeoutException
-import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.RuleDataInterface
@@ -100,13 +99,9 @@ data class BookChapter(
         return true
     }
 
-    override fun putBigVariable(key: String, value: String?) {
-        RuleBigDataHelp.putChapterVariable(bookUrl, url, key, value)
-    }
+    override fun putBigVariable(key: String, value: String?) {}
 
-    override fun getBigVariable(key: String): String? {
-        return RuleBigDataHelp.getChapterVariable(bookUrl, url, key)
-    }
+    override fun getBigVariable(key: String): String? = null
 
     override fun hashCode() = url.hashCode()
 

@@ -11,7 +11,6 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isOnLineTxt
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.ReadBook
-import io.legado.app.ui.association.OpenUrlConfirmActivity
 import io.legado.app.ui.book.read.page.delegate.PageDelegate
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
@@ -309,9 +308,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                 }
                 is TextHtmlColumn -> {
                     column.linkUrl?.let {
-                        activity?.startActivity<OpenUrlConfirmActivity> {
-                            putExtra("uri", it)
-                        }
+                        activity?.toastOnUi("链接打开已移除: $it")
                         handled = true
                     }
                 }

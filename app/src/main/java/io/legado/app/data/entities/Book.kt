@@ -439,6 +439,10 @@ data class Book(
         appDb.bookDao.delete(this)
     }
 
+    override fun putBigVariable(key: String, value: String?) {}
+
+    override fun getBigVariable(key: String): String? = null
+
     @Suppress("ConstPropertyName")
     companion object {
         const val hTag = 2L

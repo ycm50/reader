@@ -14,7 +14,6 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.http.SSLHelper
@@ -25,8 +24,6 @@ import io.legado.app.help.source.getSourceType
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.QueryTTF
-import io.legado.app.ui.association.OnLineImportActivity
-import io.legado.app.ui.association.OpenUrlConfirmActivity
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.EncoderUtils
@@ -213,19 +210,7 @@ interface JsExtensions : JsEncodeUtils {
      * @return 返回js获取的内容
      */
     fun webView(html: String?, url: String?, js: String?, cacheFirst: Boolean): String? {
-        if (isMainThread) {
-            error("webView must be called on a background thread")
-        }
-        return runBlocking(context) {
-            BackstageWebView(
-                url = url,
-                html = html,
-                javaScript = js,
-                headerMap = getSource()?.getHeaderMap(true),
-                tag = getSource()?.getKey(),
-                cacheFirst = cacheFirst
-            ).getStrResponse().body
-        }
+        throw NoStackTraceException("webView feature is not available in this build")
     }
 
     fun webViewGetSource(html: String?, url: String?, js: String?, sourceRegex: String): String? {
@@ -246,21 +231,7 @@ interface JsExtensions : JsEncodeUtils {
         cacheFirst: Boolean,
         delayTime:Long
     ): String? {
-        if (isMainThread) {
-            error("webViewGetSource must be called on a background thread")
-        }
-        return runBlocking(context) {
-            BackstageWebView(
-                url = url,
-                html = html,
-                javaScript = js,
-                headerMap = getSource()?.getHeaderMap(true),
-                tag = getSource()?.getKey(),
-                sourceRegex = sourceRegex,
-                cacheFirst = cacheFirst,
-                delayTime = delayTime
-            ).getStrResponse().body
-        }
+        throw NoStackTraceException("webViewGetSource feature is not available in this build")
     }
 
     fun webViewGetOverrideUrl(html: String?, url: String?, js: String?, overrideUrlRegex: String): String? {
@@ -281,37 +252,7 @@ interface JsExtensions : JsEncodeUtils {
         cacheFirst: Boolean,
         delayTime:Long
     ): String? {
-        if (isMainThread) {
-            error("webViewGetOverrideUrl must be called on a background thread")
-        }
-        return runBlocking(context) {
-            BackstageWebView(
-                url = url,
-                html = html,
-                javaScript = js,
-                headerMap = getSource()?.getHeaderMap(true),
-                tag = getSource()?.getKey(),
-                overrideUrlRegex = overrideUrlRegex,
-                cacheFirst = cacheFirst,
-                delayTime = delayTime
-            ).getStrResponse().body
-        }
-    }
-
-    @JavascriptInterface
-    fun openVideoPlayer(url: String, title: String) {
-        openVideoPlayer(url, title, false)
-    }
-
-    /**
-     * 打开内置视频播放器
-     * @param url 视频播放链接
-     * @param title 视频的标题
-     * @param isFloat 是否悬浮窗打开
-     */
-    @JavascriptInterface
-    fun openVideoPlayer(url: String, title: String, isFloat: Boolean) {
-        SourceHelp.openVideoPlayer(getSource(), url, title, isFloat)
+        throw NoStackTraceException("webViewGetOverrideUrl feature is not available in this build")
     }
 
     /**
@@ -1148,19 +1089,11 @@ interface JsExtensions : JsEncodeUtils {
         require(url.length < 64 * 1024) { "openUrl parameter url too long" }
         rhinoContextOrNull?.ensureActive()
         if (url.startsWith("legado://") || url.startsWith("yuedu://")) {
-            appCtx.startActivity<OnLineImportActivity> {
-                data = url.toUri()
-            }
+            /* OnLineImportActivity removed */
             return
         }
         val source = getSource() ?: throw NoStackTraceException("openUrl source cannot be null")
-        appCtx.startActivity<OpenUrlConfirmActivity> {
-            putExtra("uri", url)
-            putExtra("mimeType", mimeType)
-            putExtra("sourceOrigin", source.getKey())
-            putExtra("sourceName", source.getTag())
-            putExtra("sourceType", source.getSourceType())
-        }
+        /* OpenUrlConfirmActivity removed */
     }
 
     /**

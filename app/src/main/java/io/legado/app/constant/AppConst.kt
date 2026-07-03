@@ -6,7 +6,6 @@ import android.provider.Settings
 import androidx.annotation.Keep
 import cn.hutool.crypto.digest.DigestUtil
 import io.legado.app.BuildConfig
-import io.legado.app.help.update.AppVariant
 import org.apache.commons.lang3.time.FastDateFormat
 import splitties.init.appCtx
 
@@ -17,8 +16,6 @@ object AppConst {
     const val APP_TAG = "Legado"
 
     const val channelIdDownload = "channel_download"
-    const val channelIdReadAloud = "channel_read_aloud"
-    const val channelIdWeb = "channel_web"
 
     const val UA_NAME = "User-Agent"
 
@@ -66,10 +63,10 @@ object AppConst {
             ?.let {
                 appInfo.versionName = it.versionName!!
                 appInfo.appVariant = when {
-                    it.packageName.contains("releaseA") -> AppVariant.BETA_RELEASEA
-                    isBeta -> AppVariant.BETA_RELEASE
-                    isOfficial -> AppVariant.OFFICIAL
-                    else -> AppVariant.UNKNOWN
+                    it.packageName.contains("releaseA") -> "beta_releaseA"
+                    isBeta -> "beta_release"
+                    isOfficial -> "official"
+                    else -> "unknown"
                 }
 
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
@@ -100,7 +97,7 @@ object AppConst {
     data class AppInfo(
         var versionCode: Long = 0L,
         var versionName: String = "",
-        var appVariant: AppVariant = AppVariant.UNKNOWN
+        var appVariant: String = "unknown"
     )
 
     /**

@@ -4,8 +4,6 @@ import io.legado.app.constant.AppConst
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.data.entities.RssSource
-import io.legado.app.data.entities.RuleSub
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.http.decompressed
@@ -18,21 +16,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 object RuleUpdate {
     val cacheBookSourceMap = ConcurrentHashMap<String, List<BookSource>>()
-    val cacheRssSourceMap = ConcurrentHashMap<String, List<RssSource>>()
     val cacheReplaceRuleMap = ConcurrentHashMap<String, List<ReplaceRule>>()
 
-    suspend fun cacheSource(ruleSub: RuleSub): Boolean {
-        val url = ruleSub.url
-        val type = ruleSub.type
-        val silentUpdate = ruleSub.silentUpdate
-        val update = ruleSub.update
-        val updateInterval = ruleSub.updateInterval
-        if (update + updateInterval * 3600 * 1000L > System.currentTimeMillis()) {
-            return false
-        } else {
-            ruleSub.update = System.currentTimeMillis()
-            appDb.ruleSubDao.update(ruleSub)
-        }
+    suspend fun cacheSource(url: String, type: Int, silentUpdate: Boolean): Boolean {
         var upRules = false
         okHttpClient.newCallResponseBody {
             if (url.endsWith("#requestWithoutUA")) {
@@ -60,27 +46,6 @@ object RuleUpdate {
                             }
                             else {
                                 cacheBookSourceMap[url] = lists
-                                return true
-                            }
-                        }
-                    }
-                }
-                1 -> GSON.fromJsonArray<RssSource>(it).getOrThrow().let { lists ->
-                    val source = lists.firstOrNull() ?: return@let
-                    if (source.sourceUrl.isEmpty()) {
-                        throw NoStackTraceException("不是订阅源")
-                    }
-                    lists.forEach { list ->
-                        val localSource = appDb.rssSourceDao.getByKey(list.sourceUrl)
-                        if (localSource == null || localSource.lastUpdateTime < list.lastUpdateTime) {
-                            if (silentUpdate) {
-                                if (localSource != null) {
-                                    list.sourceGroup = localSource.sourceGroup
-                                }
-                                SourceHelp.insertRssSource(list)
-                            }
-                            else {
-                                cacheRssSourceMap[url] = lists
                                 return true
                             }
                         }

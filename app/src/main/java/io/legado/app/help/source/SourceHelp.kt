@@ -1,28 +1,18 @@
 package io.legado.app.help.source
 
-import android.content.Intent
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.core.content.ContextCompat
 import io.legado.app.constant.SourceType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.data.entities.RssSource
 import io.legado.app.help.AppCacheManager
 import io.legado.app.help.config.SourceConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
-import io.legado.app.model.VideoPlay
-import io.legado.app.service.VideoPlayService
-import io.legado.app.ui.video.VideoPlayerActivity
 import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.splitNotBlank
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 
@@ -43,22 +33,16 @@ object SourceHelp {
         key ?: return null
         if (ReadBook.bookSource?.bookSourceUrl == key) {
             return ReadBook.bookSource
-        } else if (AudioPlay.bookSource?.bookSourceUrl == key) {
-            return AudioPlay.bookSource
         } else if (ReadManga.bookSource?.bookSourceUrl == key) {
             return ReadManga.bookSource
-        } else if (VideoPlay.source?.getKey() == key) {
-            return VideoPlay.source
         }
         return appDb.bookSourceDao.getBookSource(key)
-            ?: appDb.rssSourceDao.getByKey(key)
     }
 
     fun getSource(key: String?, @SourceType.Type type: Int): BaseSource? {
         key ?: return null
         return when (type) {
             SourceType.book -> appDb.bookSourceDao.getBookSource(key)
-            SourceType.rss -> appDb.rssSourceDao.getByKey(key)
             else -> null
         }
     }
@@ -66,7 +50,6 @@ object SourceHelp {
     fun deleteSource(key: String, @SourceType.Type type: Int) {
         when (type) {
             SourceType.book -> deleteBookSource(key)
-            SourceType.rss -> deleteRssSource(key)
         }
     }
 
@@ -99,42 +82,9 @@ object SourceHelp {
         AppCacheManager.clearSourceVariables()
     }
 
-    fun deleteRssSources(sources: List<RssSource>) {
-        appDb.runInTransaction {
-            sources.forEach {
-                deleteRssSourceInternal(it.sourceUrl)
-            }
-        }
-        AppCacheManager.clearSourceVariables()
-    }
-
-    private fun deleteRssSourceInternal(key: String) {
-        appDb.rssSourceDao.delete(key)
-        appDb.rssArticleDao.delete(key)
-        appDb.cacheDao.deleteSourceVariables(key)
-    }
-
-    fun deleteRssSource(key: String) {
-        deleteRssSourceInternal(key)
-        AppCacheManager.clearSourceVariables()
-    }
-
     fun enableSource(key: String, @SourceType.Type type: Int, enable: Boolean) {
         when (type) {
             SourceType.book -> appDb.bookSourceDao.enable(key, enable)
-            SourceType.rss -> appDb.rssSourceDao.enable(key, enable)
-        }
-    }
-
-    fun insertRssSource(vararg rssSources: RssSource) {
-        val rssSourcesGroup = rssSources.groupBy {
-            is18Plus(it.sourceUrl)
-        }
-        rssSourcesGroup[true]?.forEach {
-            appCtx.toastOnUi("${it.sourceName}是18+网址,禁止导入.")
-        }
-        rssSourcesGroup[false]?.let {
-            appDb.rssSourceDao.insert(*it.toTypedArray())
         }
     }
 
@@ -182,25 +132,6 @@ object SourceHelp {
                 bookSource.customOrder = index
             }
             appDb.bookSourceDao.upOrder(sources)
-        }
-    }
-
-    fun openVideoPlayer(source: BaseSource?, url: String, title: String, isFloat: Boolean) {
-        if (isFloat) {
-            val intent = Intent(appCtx, VideoPlayService::class.java).apply {
-                putExtra("videoUrl", url)
-                putExtra("videoTitle", title)
-                putExtra("sourceKey", source?.getKey())
-                putExtra("sourceType", source?.getSourceType())
-            }
-            ContextCompat.startForegroundService(appCtx, intent)
-        } else {
-            appCtx.startActivity<VideoPlayerActivity> {
-                putExtra("videoUrl", url)
-                putExtra("videoTitle", title)
-                putExtra("sourceKey", source?.getKey())
-                putExtra("sourceType", source?.getSourceType())
-            }
         }
     }
 

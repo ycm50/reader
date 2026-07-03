@@ -25,10 +25,7 @@ import io.legado.app.lib.prefs.fragment.PreferenceFragment
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.CheckSource
 import io.legado.app.model.ImageProvider
-import io.legado.app.receiver.SharedReceiverActivity
-import io.legado.app.service.WebService
 import io.legado.app.ui.file.HandleFileContract
-import io.legado.app.ui.video.config.SettingsDialog
 import io.legado.app.ui.widget.code.addJsonPattern
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.utils.LogUtils
@@ -53,7 +50,7 @@ class OtherConfigFragment : PreferenceFragment(),
     private val packageManager = appCtx.packageManager
     private val componentName = ComponentName(
         appCtx,
-        SharedReceiverActivity::class.java.name
+        "io.legado.app.receiver.SharedReceiverActivity"
     )
     private val localBookTreeSelect = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { treeUri ->
@@ -98,7 +95,6 @@ class OtherConfigFragment : PreferenceFragment(),
         when (preference.key) {
             PreferKey.userAgent -> showUserAgentDialog()
             PreferKey.customHosts -> showCustomHostsDialog()
-            PreferKey.videoSetting -> showDialogFragment(SettingsDialog(requireActivity()))
             PreferKey.defaultBookTreeUri -> localBookTreeSelect.launch {
                 title = getString(R.string.select_book_folder)
                 mode = HandleFileContract.DIR_SYS
@@ -132,7 +128,6 @@ class OtherConfigFragment : PreferenceFragment(),
                 }
 
             PreferKey.cleanCache -> clearCache()
-            PreferKey.uploadRule -> showDialogFragment<DirectLinkUploadConfig>()
             PreferKey.checkSource -> showDialogFragment<CheckSourceConfig>()
             PreferKey.bitmapCacheSize -> {
                 NumberPickerDialog(requireContext())
@@ -185,10 +180,6 @@ class OtherConfigFragment : PreferenceFragment(),
 
             PreferKey.webPort -> {
                 upPreferenceSummary(key, AppConfig.webPort.toString())
-                if (WebService.isRun) {
-                    WebService.stop(requireContext())
-                    WebService.start(requireContext())
-                }
             }
 
             PreferKey.defaultBookTreeUri -> {
@@ -208,7 +199,7 @@ class OtherConfigFragment : PreferenceFragment(),
                 setProcessTextEnable(it.getBoolean(key, true))
             }
 
-            PreferKey.showDiscovery, PreferKey.showRss -> postEvent(EventBus.NOTIFY_MAIN, true)
+            PreferKey.showDiscovery -> postEvent(EventBus.NOTIFY_MAIN, true)
             PreferKey.language -> listView.postDelayed(1000) {
                 appCtx.restart()
             }

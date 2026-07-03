@@ -1,25 +1,22 @@
 package io.legado.app.help.update
 
-import io.legado.app.help.coroutine.Coroutine
-import kotlinx.coroutines.CoroutineScope
+import android.content.Context
 
-object AppUpdate {
+data class UpdateInfo(
+    val versionCode: Int = 0,
+    val versionName: String = "",
+    val downloadUrl: String = "",
+    val changelog: String = ""
+)
 
-    val gitHubUpdate: AppUpdateInterface by lazy {
-        AppUpdateGitHub
+class AppUpdate(private val context: Context) {
+
+    fun check(onResult: (UpdateInfo?) -> Unit) {
+        // TODO: query update server and return the result
+        onResult(null)
     }
 
-    data class UpdateInfo(
-        val tagName: String,
-        val updateLog: String,
-        val downloadUrl: String,
-        val fileName: String
-    )
-
-    interface AppUpdateInterface {
-
-        fun check(scope: CoroutineScope): Coroutine<UpdateInfo>
-
+    fun downloadAndInstall(updateInfo: UpdateInfo) {
+        // TODO: download APK and trigger installation
     }
-
 }

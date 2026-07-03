@@ -1,0 +1,14 @@
+-- Merging decision tree log ---
+manifest
+ADDED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml:2:1-4:12
+INJECTED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml:2:1-4:12
+	package
+		INJECTED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml
+uses-sdk
+INJECTED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml
+INJECTED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from A:\Downloads\legado\modules\rhino\src\main\AndroidManifest.xml

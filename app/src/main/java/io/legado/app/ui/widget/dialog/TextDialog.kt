@@ -13,7 +13,6 @@ import io.legado.app.databinding.DialogTextViewBinding
 import io.legado.app.help.CacheManager
 import io.legado.app.help.IntentData
 import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.code.CodeEditActivity
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.setHtml
 import io.legado.app.utils.setLayout
@@ -110,13 +109,7 @@ class TextDialog() : BaseDialogFragment(R.layout.dialog_text_view) {
                 when (menu.itemId) {
                     R.id.menu_close -> dismissAllowingStateLoss()
                     R.id.menu_fullscreen_edit -> {
-                        val cacheKey = "code_text_${System.currentTimeMillis()}"
-                        CacheManager.putMemory(cacheKey, content)
-                        startActivity<CodeEditActivity> {
-                            putExtra("cacheKey", cacheKey)
-                            putExtra("title", title)
-                            putExtra("languageName", if (mode == Mode.MD.name) "text.html.markdown" else "text.html.basic")
-                        }
+                        /* CodeEditActivity removed */
                     }
                 }
                 true

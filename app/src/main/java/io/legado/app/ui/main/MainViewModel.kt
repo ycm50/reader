@@ -13,8 +13,6 @@ import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
-import io.legado.app.help.AppWebDav
-import io.legado.app.help.DefaultData
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
 import io.legado.app.help.book.isLocal
@@ -24,6 +22,8 @@ import io.legado.app.help.book.sync
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
+import io.legado.app.model.RuleUpdate
+import io.legado.app.model.SourceCallBack
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.CacheBookService
 import io.legado.app.utils.onEachParallel
@@ -45,8 +45,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import kotlin.collections.forEach
 import kotlin.math.min
-import io.legado.app.model.RuleUpdate
-import io.legado.app.model.SourceCallBack
 
 class MainViewModel(application: Application) : BaseViewModel(application) {
     private var threadCount = AppConfig.threadCount
@@ -103,17 +101,7 @@ class MainViewModel(application: Application) : BaseViewModel(application) {
     }
 
     fun ruleSubsUp() {
-        execute {
-            val ruleSubs = appDb.ruleSubDao.all
-            for (ruleSub in ruleSubs) {
-                if (ruleSub.autoUpdate) {
-                    val checkResult = RuleUpdate.cacheSource(ruleSub)
-                    if(checkResult) {
-                        callback?.openImportUi(ruleSub.type, ruleSub.url)
-                    }
-                }
-            }
-        }
+        // RuleSub update removed
     }
 
     fun upToc(books: List<Book>, onlyUpdateRead: Boolean) {
@@ -277,19 +265,7 @@ class MainViewModel(application: Application) : BaseViewModel(application) {
     }
 
     fun postLoad() {
-        execute {
-            if (appDb.httpTTSDao.count == 0) {
-                DefaultData.httpTTS.let {
-                    appDb.httpTTSDao.insert(*it.toTypedArray())
-                }
-            }
-        }
-    }
-
-    fun restoreWebDav(name: String) {
-        execute {
-            AppWebDav.restoreWebDav(name)
-        }
+        // No default data to import after removing HttpTTS
     }
 
     private fun deleteNotShelfBook() {

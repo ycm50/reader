@@ -12,14 +12,14 @@ object DatabaseMigrations {
 
     val migrations: Array<Migration> by lazy {
         arrayOf(
-            migration_10_11, migration_11_12, migration_12_13, migration_13_14,
-            migration_14_15, migration_15_17, migration_17_18, migration_18_19,
-            migration_19_20, migration_20_21, migration_21_22, migration_22_23,
-            migration_23_24, migration_24_25, migration_25_26, migration_26_27,
-            migration_27_28, migration_28_29, migration_29_30, migration_30_31,
-            migration_31_32, migration_32_33, migration_33_34, migration_34_35,
-            migration_35_36, migration_36_37, migration_37_38, migration_38_39,
-            migration_39_40, migration_40_41, migration_41_42, migration_42_43,
+            migration_10_11, migration_13_14, migration_14_15, migration_15_17,
+            migration_18_19, migration_19_20, migration_20_21,
+            migration_21_22, migration_22_23, migration_23_24,
+            migration_26_27, migration_29_30, migration_30_31,
+            migration_31_32, migration_32_33, migration_33_34,
+            migration_34_35, migration_35_36, migration_37_38,
+            migration_39_40, migration_42_43,
+            migration_80_81, migration_83_84, migration_89_90,
         )
     }
 
@@ -31,18 +31,6 @@ object DatabaseMigrations {
                     name TEXT NOT NULL, rule TEXT NOT NULL, serialNumber INTEGER NOT NULL, 
                     enable INTEGER NOT NULL, PRIMARY KEY (id))"""
             )
-        }
-    }
-
-    private val migration_11_12 = object : Migration(11, 12) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE rssSources ADD style TEXT ")
-        }
-    }
-
-    private val migration_12_13 = object : Migration(12, 13) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE rssSources ADD articleStyle INTEGER NOT NULL DEFAULT 0 ")
         }
     }
 
@@ -73,12 +61,6 @@ object DatabaseMigrations {
     private val migration_15_17 = object : Migration(15, 17) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("CREATE TABLE IF NOT EXISTS `readRecord` (`bookName` TEXT NOT NULL, `readTime` INTEGER NOT NULL, PRIMARY KEY(`bookName`))")
-        }
-    }
-
-    private val migration_17_18 = object : Migration(17, 18) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("CREATE TABLE IF NOT EXISTS `httpTTS` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, PRIMARY KEY(`id`))")
         }
     }
 
@@ -142,30 +124,8 @@ object DatabaseMigrations {
         }
     }
 
-    private val migration_24_25 = object : Migration(24, 25) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
-                """CREATE TABLE IF NOT EXISTS `sourceSubs` 
-                    (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, `type` INTEGER NOT NULL, `customOrder` INTEGER NOT NULL, 
-                    PRIMARY KEY(`id`))"""
-            )
-        }
-    }
-
-    private val migration_25_26 = object : Migration(25, 26) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(
-                """CREATE TABLE IF NOT EXISTS `ruleSubs` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, `type` INTEGER NOT NULL, 
-                    `customOrder` INTEGER NOT NULL, `autoUpdate` INTEGER NOT NULL, `update` INTEGER NOT NULL, PRIMARY KEY(`id`))"""
-            )
-            db.execSQL(" insert into `ruleSubs` select *, 0, 0 from `sourceSubs` ")
-            db.execSQL("DROP TABLE `sourceSubs`")
-        }
-    }
-
     private val migration_26_27 = object : Migration(26, 27) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL(" ALTER TABLE rssSources ADD singleUrl INTEGER NOT NULL DEFAULT 0 ")
             db.execSQL(
                 """CREATE TABLE IF NOT EXISTS `bookmarks1` (`time` INTEGER NOT NULL, `bookUrl` TEXT NOT NULL, `bookName` TEXT NOT NULL, 
                         `bookAuthor` TEXT NOT NULL, `chapterIndex` INTEGER NOT NULL, `chapterPos` INTEGER NOT NULL, `chapterName` TEXT NOT NULL, 
@@ -182,32 +142,10 @@ object DatabaseMigrations {
         }
     }
 
-    private val migration_27_28 = object : Migration(27, 28) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE rssArticles ADD variable TEXT")
-            db.execSQL("ALTER TABLE rssStars ADD variable TEXT")
-        }
-    }
-
-    private val migration_28_29 = object : Migration(28, 29) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE rssSources ADD sourceComment TEXT")
-        }
-    }
-
     private val migration_29_30 = object : Migration(29, 30) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE chapters ADD `startFragmentId` TEXT")
             db.execSQL("ALTER TABLE chapters ADD `endFragmentId` TEXT")
-            db.execSQL(
-                """
-                    CREATE TABLE IF NOT EXISTS `epubChapters` 
-                    (`bookUrl` TEXT NOT NULL, `href` TEXT NOT NULL, `parentHref` TEXT, 
-                    PRIMARY KEY(`bookUrl`, `href`), FOREIGN KEY(`bookUrl`) REFERENCES `books`(`bookUrl`) ON UPDATE NO ACTION ON DELETE CASCADE )
-                """
-            )
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_epubChapters_bookUrl` ON `epubChapters` (`bookUrl`)")
-            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_epubChapters_bookUrl_href` ON `epubChapters` (`bookUrl`, `href`)")
         }
     }
 
@@ -275,23 +213,9 @@ object DatabaseMigrations {
         }
     }
 
-    private val migration_36_37 = object : Migration(36, 37) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `rssSources` ADD `loginUrl` TEXT")
-            db.execSQL("ALTER TABLE `rssSources` ADD `loginUi` TEXT")
-            db.execSQL("ALTER TABLE `rssSources` ADD `loginCheckJs` TEXT")
-        }
-    }
-
     private val migration_37_38 = object : Migration(37, 38) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE `book_sources` ADD `respondTime` INTEGER NOT NULL DEFAULT 180000")
-        }
-    }
-
-    private val migration_38_39 = object : Migration(38, 39) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `rssSources` ADD `concurrentRate` TEXT")
         }
     }
 
@@ -302,25 +226,36 @@ object DatabaseMigrations {
         }
     }
 
-    private val migration_40_41 = object : Migration(40, 41) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `httpTTS` ADD `loginUrl` TEXT")
-            db.execSQL("ALTER TABLE `httpTTS` ADD `loginUi` TEXT")
-            db.execSQL("ALTER TABLE `httpTTS` ADD `loginCheckJs` TEXT")
-            db.execSQL("ALTER TABLE `httpTTS` ADD `header` TEXT")
-            db.execSQL("ALTER TABLE `httpTTS` ADD `concurrentRate` TEXT")
-        }
-    }
-
-    private val migration_41_42 = object : Migration(41, 42) {
-        override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE 'httpTTS' ADD `contentType` TEXT")
-        }
-    }
-
     private val migration_42_43 = object : Migration(42, 43) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE `chapters` ADD `isVolume` INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+    private val migration_80_81 = object : Migration(80, 81) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // rssArticles table was handled here; now dropped in 89→90
+        }
+    }
+
+    private val migration_83_84 = object : Migration(83, 84) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // rssSources table was handled here; now dropped in 89→90
+        }
+    }
+
+    private val migration_89_90 = object : Migration(89, 90) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Drop tables for features that have been removed
+            db.execSQL("DROP TABLE IF EXISTS rssSources")
+            db.execSQL("DROP TABLE IF EXISTS rssArticles")
+            db.execSQL("DROP TABLE IF EXISTS rssStars")
+            db.execSQL("DROP TABLE IF EXISTS rssReadRecords")
+            db.execSQL("DROP TABLE IF EXISTS httpTTS")
+            db.execSQL("DROP TABLE IF EXISTS ruleSubs")
+            db.execSQL("DROP TABLE IF EXISTS dictRules")
+            db.execSQL("DROP TABLE IF EXISTS keyboardAssists")
+            db.execSQL("DROP TABLE IF EXISTS servers")
         }
     }
 
@@ -370,42 +305,6 @@ object DatabaseMigrations {
         columnName = "enabledReview"
     )
     class Migration_64_65 : AutoMigrationSpec
-
-    @Suppress("ClassName")
-    class Migration_80_81 : AutoMigrationSpec {
-        override fun onPostMigrate(db: SupportSQLiteDatabase) {
-            db.execSQL("""
-            CREATE TABLE rssArticles_new (
-                origin TEXT NOT NULL DEFAULT '',
-                sort TEXT NOT NULL DEFAULT '',
-                title TEXT NOT NULL DEFAULT '',
-                `order` INTEGER NOT NULL DEFAULT 0,
-                link TEXT NOT NULL DEFAULT '',
-                pubDate TEXT,
-                description TEXT,
-                content TEXT,
-                image TEXT,
-                `group` TEXT NOT NULL DEFAULT '默认分组',
-                read INTEGER NOT NULL DEFAULT 0,
-                variable TEXT,
-                PRIMARY KEY (origin, link, sort)
-            )
-        """.trimIndent())
-            db.execSQL("""
-            INSERT INTO rssArticles_new (origin, sort, title, `order`, link, pubDate, description, content, image, `group`, read, variable)
-            SELECT origin, sort, title, `order`, link, pubDate, description, content, image, `group`, read, variable FROM rssArticles
-        """.trimIndent())
-            db.execSQL("DROP TABLE rssArticles")
-            db.execSQL("ALTER TABLE rssArticles_new RENAME TO rssArticles")
-        }
-    }
-
-    @Suppress("ClassName")
-    @DeleteColumn(
-        tableName = "rssArticles",
-        columnName = "ratio"
-    )
-    class Migration_83_84 : AutoMigrationSpec
 
     @Suppress("ClassName")
     @DeleteColumn(

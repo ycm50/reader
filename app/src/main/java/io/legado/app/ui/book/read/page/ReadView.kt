@@ -15,9 +15,7 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
-import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.ContentEditDialog
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
@@ -29,7 +27,6 @@ import io.legado.app.ui.book.read.page.delegate.SimulationPageDelegate
 import io.legado.app.ui.book.read.page.delegate.SlidePageDelegate
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.entities.TextChapter
-import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
@@ -444,26 +441,12 @@ class ReadView(context: Context, attrs: AttributeSet) :
             1 -> pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
             2 -> pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
             3 -> ReadBook.moveToNextChapter(true)
-            4 -> ReadBook.moveToPrevChapter(upContent = true, toLast = false)
-            5 -> ReadAloud.prevParagraph(context)
-            6 -> ReadAloud.nextParagraph(context)
-            7 -> callBack.addBookmark()
-            8 -> activity?.showDialogFragment(ContentEditDialog())
-            9 -> callBack.changeReplaceRuleState()
-            10 -> callBack.openChapterList()
-            11 -> callBack.openSearchActivity(null)
-            12 -> ReadBook.syncProgress(
-                { progress -> callBack.sureNewProgress(progress) },
-                { context.longToastOnUi(context.getString(R.string.upload_book_success)) },
-                { context.longToastOnUi(context.getString(R.string.sync_book_progress_success)) })
-
-            13 -> {
-                if (BaseReadAloudService.isPlay()) {
-                    ReadAloud.pause(context)
-                } else {
-                    ReadAloud.resume(context)
-                }
-            }
+            4 -> ReadBook.moveToPrevChapter(upContent = true)
+            5 -> callBack.addBookmark()
+            6 -> activity?.showDialogFragment(ContentEditDialog())
+            7 -> callBack.changeReplaceRuleState()
+            8 -> callBack.openChapterList()
+            9 -> callBack.openSearchActivity(null)
         }
     }
 
@@ -660,24 +643,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
     }
 
     /**
-     * 从选择位置开始朗读
-     */
-    suspend fun aloudStartSelect() {
-        val selectStartPos = curPage.selectStartPos
-        var pagePos = selectStartPos.relativePagePos
-        val line = selectStartPos.lineIndex
-        val column = selectStartPos.columnIndex
-        while (pagePos > 0) {
-            if (!ReadBook.moveToNextPage()) {
-                ReadBook.moveToNextChapterAwait(false)
-            }
-            pagePos--
-        }
-        val startPos = curPage.textPage.getPosByLineColumn(line, column)
-        ReadBook.readAloud(startPos = startPos)
-    }
-
-    /**
      * @return 选择的文本
      */
     fun getSelectText(): String {
@@ -686,10 +651,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
 
     fun getCurVisiblePage(): TextPage {
         return curPage.getCurVisiblePage()
-    }
-
-    fun getReadAloudPos(): Pair<Int, TextLine>? {
-        return curPage.getReadAloudPos()
     }
 
     fun invalidateTextPage() {
@@ -734,17 +695,17 @@ class ReadView(context: Context, attrs: AttributeSet) :
 
     override val currentChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(0) else null
+            return if (callBack.isInitFinish) ReadBook.curTextChapter else null
         }
 
     override val nextChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(1) else null
+            return if (callBack.isInitFinish) ReadBook.nextTextChapter else null
         }
 
     override val prevChapter: TextChapter?
         get() {
-            return if (callBack.isInitFinish) ReadBook.textChapter(-1) else null
+            return if (callBack.isInitFinish) ReadBook.prevTextChapter else null
         }
 
     override fun hasNextChapter(): Boolean {

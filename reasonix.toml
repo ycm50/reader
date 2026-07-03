@@ -1,0 +1,2 @@
+[permissions]
+allow = ["Bash(cd /c/Users/Administrator/Downloads/legado && ls -la)", "Bash(pwd && ls -la)", "Bash(cd /a/Downloads/legado && ls -la app/src/main/java/io/legado/app/ 2>/dev/null | head -50)", "Bash(cd /a/Downloads/legado && ls -la modules/)", "Bash(cd /a/Downloads/legado && ls -la app/src/main/java/io/legado/app/)"]
