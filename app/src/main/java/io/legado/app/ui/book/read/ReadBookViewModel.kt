@@ -90,20 +90,31 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
                     val uri = intent.data!!
                     val fileName = uri.lastPathSegment?.substringAfterLast('/')
                         ?: uri.lastPathSegment ?: uri.toString()
-                    appDb.bookDao.getBook(uri.toString())
+                    val existingBook = appDb.bookDao.getBook(uri.toString())
                         ?: appDb.bookDao.getBookByFileName(fileName)
-                        ?: kotlin.run {
-                            val newBook = Book(
-                                name = fileName,
-                                author = "",
-                                origin = BookType.localTag,
-                                originName = fileName,
-                                bookUrl = uri.toString(),
-                                type = BookType.text or BookType.local
-                            )
-                            appDb.bookDao.insert(newBook)
-                            newBook
+                    if (existingBook != null) {
+                        // 已导入过的书，若 bookUrl 仍为 content URI 则迁移到持久路径
+                        if (existingBook.bookUrl.isContentScheme()) {
+                            val savedUri = copyToAppDir(uri, fileName)
+                            existingBook.bookUrl = savedUri.toString()
+                            existingBook.originName = fileName
+                            appDb.bookDao.update(existingBook)
                         }
+                        existingBook
+                    } else {
+                        // 首次导入：复制到应用私有目录确保权限持久
+                        val savedUri = copyToAppDir(uri, fileName)
+                        val newBook = Book(
+                            name = fileName,
+                            author = "",
+                            origin = BookType.localTag,
+                            originName = fileName,
+                            bookUrl = savedUri.toString(),
+                            type = BookType.text or BookType.local
+                        )
+                        appDb.bookDao.insert(newBook)
+                        newBook
+                    }
                 }
                 bookUrl.isNullOrEmpty() -> appDb.bookDao.lastReadBook
                 else -> appDb.bookDao.getBook(bookUrl)
@@ -130,6 +141,23 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
         }.onFinally {
             ReadBook.saveRead()
         }
+    }
+
+    /**
+     * 从外部 URI 复制文件到应用私有目录，确保持久访问权限
+     */
+    private fun copyToAppDir(uri: Uri, fileName: String): Uri {
+        val booksDir = File(context.getExternalFilesDir(null), "Books")
+        booksDir.mkdirs()
+        val targetFile = File(booksDir, fileName)
+        context.contentResolver.openInputStream(uri)?.let { input ->
+            input.use { i ->
+                FileOutputStream(targetFile).use { o ->
+                    i.copyTo(o)
+                }
+            }
+        } ?: throw FileNotFoundException("无法读取文件: $uri")
+        return Uri.fromFile(targetFile)
     }
 
     private suspend fun initBook(book: Book) {
