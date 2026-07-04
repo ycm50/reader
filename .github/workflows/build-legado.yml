@@ -57,7 +57,7 @@ jobs:
 
       - name: Rename APK
         run: |
-          apk=$(find app/*/release -name "*.apk" | head -1)
+          apk=$(find app/ -name "*.apk" | head -1)
           echo "Found APK: $apk"
           dir=$(dirname "$apk")
           mv "$apk" "$dir/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk"
