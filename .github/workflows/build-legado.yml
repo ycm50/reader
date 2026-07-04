@@ -57,9 +57,11 @@ jobs:
 
       - name: Rename APK
         run: |
-          apk=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          apk=$(find app/*/release -name "*.apk" | head -1)
           echo "Found APK: $apk"
-          mv "$apk" app/build/outputs/apk/release/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk
+          dir=$(dirname "$apk")
+          mv "$apk" "$dir/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk"
+          echo "APK_DIR=$dir" >> $GITHUB_ENV
 
       - name: Create Release & Upload APK
         uses: softprops/action-gh-release@v2
@@ -75,4 +77,4 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-          files: app/build/outputs/apk/release/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk
+          files: app/*/release/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk
