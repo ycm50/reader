@@ -1,14 +1,33 @@
-[![icon_android](https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/icon_android.png)](https://play.google.com/store/apps/details?id=io.legado.play.release)
-<a href="https://jb.gg/OpenSourceSupport" target="_blank">
-<img width="24" height="24" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg?_gl=1*135yekd*_ga*OTY4Mjg4NDYzLjE2Mzk0NTE3MzQ.*_ga_9J976DJZ68*MTY2OTE2MzM5Ny4xMy4wLjE2NjkxNjMzOTcuNjAuMC4w&_ga=2.257292110.451256242.1669085120-968288463.1639451734" alt="idea"/>
-</a>
-
 <div align="center">
-<img width="125" height="125" src="https://github.com/gedoor/legado/raw/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="legado"/>  
-  
-Legado
-Legado 是一款免费的 Android 平台开源小说阅读器。
+<img width="125" height="125" src="https://github.com/gedoor/legado/raw/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="legado"/>
+
+# Legado
+
+**一款免费的 Android 平台开源小说阅读器**
+
+[![GitHub release](https://img.shields.io/github/v/release/gedoor/legado)](https://github.com/gedoor/legado/releases)
+[![GitHub license](https://img.shields.io/github/license/gedoor/legado)](https://github.com/gedoor/legado/blob/master/LICENSE)
+[![Android CI](https://github.com/gedoor/legado/actions/workflows/BetaRelease.yml/badge.svg)](https://github.com/gedoor/legado/actions/workflows/BetaRelease.yml)
 </div>
+
+## 功能特点
+
+- 📖 支持多种阅读格式：TXT、EPUB、MOBI、PDF、UMD 等
+- 🌐 自定义书源，畅享全网小说
+- 🎨 丰富的主题和排版设置
+- 📑 智能目录解析
+- 🔍 全文搜索
+- 📤 阅读进度同步
+- 📚 书架管理
+- 🎧 听书功能
+
+## 开始使用
+
+从 [Releases](https://github.com/gedoor/legado/releases) 下载最新版本安装即可。
+
+> **注意**：本应用不提供任何内容，需要自行添加书源。
+
+---
 
 # Grateful-感谢 [![](https://img.shields.io/badge/-Grateful-F5F5F5.svg)](#Grateful-感谢-)
 > * org.jsoup:jsoup
