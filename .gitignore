@@ -1,0 +1,51 @@
+*.iml
+.gradle
+local.properties
+.DS_Store
+/build
+/build/
+/app/build/
+/app/build
+/release
+/release/
+/app/release/
+/app/release
+/debug
+/debug/
+/app/debug/
+/app/debug
+/captures
+.externalNativeBuild
+/tmp
+node_modules/
+/app/app
+/app/google
+/app/gradle.properties
+package-lock.json
+.idea/
+# Kotlin 2.0
+.kotlin/
+.cxx
+.vscode
+# Gradle
+.gradle/
+# Output APK
+*.apk
+*.aab
+*.jks
+*.keystore
+# Local
+local.properties
+# IDE
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+# Modules
+/modules/*/build/
+# AI workspace
+.reasonix/
+# Cross-drive symlink artifacts
+/a/
+/tmp/

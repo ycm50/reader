@@ -1,0 +1,238 @@
+package io.legado.app.help.storage
+
+import android.content.Context
+import android.net.Uri
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
+import io.legado.app.constant.AppLog
+import io.legado.app.constant.PreferKey
+import io.legado.app.data.appDb
+import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.model.BookCover
+import io.legado.app.utils.FileUtils
+import io.legado.app.utils.GSON
+import io.legado.app.utils.LogUtils
+import io.legado.app.utils.compress.ZipUtils
+import io.legado.app.utils.createFolderIfNotExist
+import io.legado.app.utils.defaultSharedPreferences
+import io.legado.app.utils.externalFiles
+import io.legado.app.utils.getFile
+import io.legado.app.utils.getSharedPreferences
+import io.legado.app.utils.isContentScheme
+import io.legado.app.utils.normalizeFileName
+import io.legado.app.utils.openOutputStream
+import io.legado.app.utils.outputStream
+import io.legado.app.utils.writeToOutputStream
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import splitties.init.appCtx
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import androidx.core.content.edit
+
+/**
+ * 备份
+ */
+object Backup {
+
+    val backupPath: String by lazy {
+        appCtx.filesDir.getFile("backup").createFolderIfNotExist().absolutePath
+    }
+    val zipFilePath = "${appCtx.externalFiles.absolutePath}${File.separator}tmp_backup.zip"
+
+    private const val TAG = "Backup"
+
+    private val mutex = Mutex()
+
+    private val backupFileNames by lazy {
+        arrayOf(
+            "bookshelf.json",
+            "bookmark.json",
+            "bookGroup.json",
+            "bookSource.json",
+            "replaceRule.json",
+            "searchHistory.json",
+            "txtTocRule.json",
+            ReadBookConfig.configFileName,
+            ReadBookConfig.shareConfigFileName,
+            ThemeConfig.configFileName,
+            BookCover.configFileName,
+            "config.xml"
+        )
+    }
+
+    private fun getNowZipFileName(): String {
+        val backupDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            .format(Date(System.currentTimeMillis()))
+        return "backup${backupDate}.zip".normalizeFileName()
+    }
+
+    private fun shouldBackup(): Boolean {
+        val lastBackup = LocalConfig.lastBackup
+        return lastBackup + TimeUnit.DAYS.toMillis(1) < System.currentTimeMillis()
+    }
+
+    fun autoBack(context: Context) {
+        if (shouldBackup()) {
+            Coroutine.async {
+                mutex.withLock {
+                    if (shouldBackup()) {
+                        backup(context, AppConfig.backupPath)
+                    }
+                }
+            }.onError {
+                AppLog.put("自动备份失败\n${it.localizedMessage}")
+            }
+        }
+    }
+
+    suspend fun backupLocked(context: Context, path: String?) {
+        mutex.withLock {
+            withContext(IO) {
+                backup(context, path)
+            }
+        }
+    }
+
+    private suspend fun backup(context: Context, path: String?) {
+        LogUtils.d(TAG, "开始备份 path:$path")
+        LocalConfig.lastBackup = System.currentTimeMillis()
+        val aes = BackupAES()
+        FileUtils.delete(backupPath)
+        writeListToJson(appDb.bookDao.all, "bookshelf.json", backupPath)
+        writeListToJson(appDb.bookmarkDao.all, "bookmark.json", backupPath)
+        writeListToJson(appDb.bookGroupDao.all, "bookGroup.json", backupPath)
+        writeListToJson(appDb.bookSourceDao.all, "bookSource.json", backupPath)
+        writeListToJson(appDb.replaceRuleDao.all, "replaceRule.json", backupPath)
+        writeListToJson(appDb.searchKeywordDao.all, "searchHistory.json", backupPath)
+        writeListToJson(appDb.txtTocRuleDao.all, "txtTocRule.json", backupPath)
+        currentCoroutineContext().ensureActive()
+        GSON.toJson(ReadBookConfig.configList).let {
+            FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.configFileName)
+                .writeText(it)
+        }
+        GSON.toJson(ReadBookConfig.shareConfig).let {
+            FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.shareConfigFileName)
+                .writeText(it)
+        }
+        GSON.toJson(ThemeConfig.configList).let {
+            FileUtils.createFileIfNotExist(backupPath + File.separator + ThemeConfig.configFileName)
+                .writeText(it)
+        }
+        BookCover.getConfig()?.let {
+            FileUtils.createFileIfNotExist(backupPath + File.separator + BookCover.configFileName)
+                .writeText(GSON.toJson(it))
+        }
+        currentCoroutineContext().ensureActive()
+        appCtx.getSharedPreferences(backupPath, "config")?.let { sp ->
+            val edit = sp.edit()
+            appCtx.defaultSharedPreferences.all.forEach { (key, value) ->
+                if (BackupConfig.keyIsNotIgnore(key)) {
+                    when (key) {
+                        else -> when (value) {
+                            is Int -> edit.putInt(key, value)
+                            is Boolean -> edit.putBoolean(key, value)
+                            is Long -> edit.putLong(key, value)
+                            is Float -> edit.putFloat(key, value)
+                            is String -> edit.putString(key, value)
+                        }
+                    }
+                }
+            }
+            edit.commit()
+        }
+        currentCoroutineContext().ensureActive()
+        val zipFileName = getNowZipFileName()
+        val paths = arrayListOf(*backupFileNames)
+        for (i in 0 until paths.size) {
+            paths[i] = backupPath + File.separator + paths[i]
+        }
+        FileUtils.delete(zipFilePath)
+        FileUtils.delete(zipFilePath.replace("tmp_", ""))
+        val backupFileName = if (AppConfig.onlyLatestBackup) {
+            "backup.zip"
+        } else {
+            zipFileName
+        }
+        if (ZipUtils.zipFiles(paths, zipFilePath)) {
+            when {
+                path.isNullOrBlank() -> {
+                    copyBackup(context.getExternalFilesDir(null)!!, backupFileName)
+                }
+
+                path.isContentScheme() -> {
+                    copyBackup(context, path.toUri(), backupFileName)
+                }
+
+                else -> {
+                    copyBackup(File(path), backupFileName)
+                }
+            }
+        }
+        FileUtils.delete(backupPath)
+        FileUtils.delete(zipFilePath)
+        currentCoroutineContext().ensureActive()
+    }
+
+    private suspend fun writeListToJson(list: List<Any>, fileName: String, path: String) {
+        currentCoroutineContext().ensureActive()
+        withContext(IO) {
+            if (list.isNotEmpty()) {
+                LogUtils.d(TAG, "阅读备份 $fileName 列表大小 ${list.size}")
+                val file = FileUtils.createFileIfNotExist(path + File.separator + fileName)
+                file.outputStream().buffered().use {
+                    GSON.writeToOutputStream(it, list)
+                }
+                LogUtils.d(TAG, "阅读备份 $fileName 写入大小 ${file.length()}")
+            } else {
+                LogUtils.d(TAG, "阅读备份 $fileName 列表为空")
+            }
+        }
+    }
+
+    @Throws(Exception::class)
+    @Suppress("SameParameterValue")
+    private fun copyBackup(context: Context, uri: Uri, fileName: String) {
+        val treeDoc = DocumentFile.fromTreeUri(context, uri)!!
+        treeDoc.findFile(fileName)?.delete()
+        val fileDoc = treeDoc.createFile("", fileName)
+            ?: throw NoStackTraceException("创建文件失败")
+        val outputS = fileDoc.openOutputStream()
+            ?: throw NoStackTraceException("打开OutputStream失败")
+        outputS.use {
+            FileInputStream(zipFilePath).use { inputS ->
+                inputS.copyTo(outputS)
+            }
+        }
+    }
+
+    @Throws(Exception::class)
+    @Suppress("SameParameterValue")
+    private fun copyBackup(rootFile: File, fileName: String) {
+        FileInputStream(File(zipFilePath)).use { inputS ->
+            val file = FileUtils.createFileIfNotExist(rootFile, fileName)
+            FileOutputStream(file).use { outputS ->
+                inputS.copyTo(outputS)
+            }
+        }
+    }
+
+    fun clearCache() {
+        FileUtils.delete(backupPath)
+        FileUtils.delete(zipFilePath)
+    }
+}
