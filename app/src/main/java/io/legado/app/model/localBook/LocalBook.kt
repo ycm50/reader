@@ -20,8 +20,6 @@ import io.legado.app.exception.TocEmptyException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.addType
-import io.legado.app.help.book.archiveName
-import io.legado.app.help.book.getArchiveUri
 import io.legado.app.help.book.getLocalUri
 import io.legado.app.help.book.getRemoteUrl
 import io.legado.app.help.book.isArchive
@@ -77,17 +75,8 @@ object LocalBook {
         val inputStream = uri.inputStream(appCtx).getOrNull()
             ?: let {
                 book.removeLocalUriCache()
-                val localArchiveUri = book.getArchiveUri()
-                if (localArchiveUri != null) {
-                    // 重新导入对应的压缩包
-                    importArchiveFile(localArchiveUri, book.originName) {
-                        it.contains(book.originName)
-                    }.firstOrNull()?.let {
-                        getBookInputStream(it)
-                    }
-                } else {
-                    null
-                }
+                // 压缩包导入功能已移除：不再从原压缩包重新解压，直接按“文件不存在”处理
+                null
             }
         if (inputStream != null) return inputStream
         book.removeLocalUriCache()

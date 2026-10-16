@@ -14,6 +14,18 @@ def name = "legado"
 def version = "3." + releaseTime()
 def gitCommits = Integer.parseInt('git rev-list HEAD --count'.execute().text.trim())
 
+// 目标架构：默认只出 arm64-v8a（.so 只保留 renderscript 的 503KB；libarchive 已移除）
+// 需要其它架构时用 -Pabi=x86_64 或 -Pabi=arm64-v8a,armeabi-v7a 覆盖
+def targetAbis = (project.findProperty("abi") ?: "arm64-v8a").toString().split(",")*.trim()
+
+// 仓库内置的公开签名密钥（keystore/legado-release.jks，密码 123456 / alias legado）：
+// 公开提交，供 CI 与任何人构建出可互相覆盖安装的 APK。
+// 若在 local.properties / ~/.gradle/gradle.properties 里定义了 RELEASE_STORE_FILE，则优先使用你自己的密钥。
+def bundledStoreFile = rootProject.file("keystore/legado-release.jks")
+def hasCustomStore = project.hasProperty("RELEASE_STORE_FILE")
+def useBundledStore = !hasCustomStore && bundledStoreFile.exists()
+def signWithStore = hasCustomStore || useBundledStore
+
 android {
     compileSdk = compile_sdk_version
     namespace = 'io.legado.app'
@@ -24,12 +36,20 @@ android {
     }
 
     signingConfigs {
-        if (project.hasProperty("RELEASE_STORE_FILE")) {
+        if (signWithStore) {
             myConfig {
-                storeFile file(RELEASE_STORE_FILE)
-                storePassword RELEASE_STORE_PASSWORD
-                keyAlias RELEASE_KEY_ALIAS
-                keyPassword RELEASE_KEY_PASSWORD
+                if (hasCustomStore) {
+                    storeFile file(RELEASE_STORE_FILE)
+                    storePassword RELEASE_STORE_PASSWORD
+                    keyAlias RELEASE_KEY_ALIAS
+                    keyPassword RELEASE_KEY_PASSWORD
+                } else {
+                    // 内置公开密钥（见文件顶部说明）
+                    storeFile bundledStoreFile
+                    storePassword "123456"
+                    keyAlias "legado"
+                    keyPassword "123456"
+                }
                 enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = true
@@ -46,6 +66,11 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         project.ext.set("archivesBaseName", name + "_" + version)
 
+        // 单架构：只打包 arm64-v8a 的 .so（libarchive + renderscript-toolkit）
+        ndk {
+            abiFilters += targetAbis
+        }
+
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += [
@@ -56,13 +81,25 @@ android {
             }
         }
     }
+    // 语言资源白名单：只打包中文（默认 values/ + values-zh / zh-rTW / zh-rHK）。
+    // 注意：AGP 8.13.2 会把这里的值原样传给 aapt2 的 -c 参数，所以必须用 Android 资源限定符写法
+    // （zh-rTW / zh-rHK）。写成 BCP-47 的 zh-TW 会直接报 "AAPT: error: invalid config 'zh-TW' for -c option"。
+    // 其余 ja/es/pt/vi 的源文件保留在仓库，只是不参与打包；需要时把码加回列表即可。
+    androidResources {
+        localeFilters += ["zh", "zh-rTW", "zh-rHK"]
+    }
+    // 不把依赖元数据块打进 APK/AAB（省几 KB；若上架 Google Play 会失去「SDK 洞察」数据）
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
     buildFeatures {
         buildConfig = true
         viewBinding = true
     }
     buildTypes {
         release {
-            if (project.hasProperty("RELEASE_STORE_FILE")) {
+            if (signWithStore) {
                 signingConfig signingConfigs.myConfig
             }
             applicationIdSuffix '.release'
@@ -77,7 +114,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            if (project.hasProperty("RELEASE_STORE_FILE")) {
+            if (signWithStore) {
                 signingConfig signingConfigs.myConfig
             }
             manifestPlaceholders.put("app_name", "@string/app_name")
@@ -230,9 +267,6 @@ dependencies {
     //颜色选择
     implementation(libs.colorpicker)
 
-    //压缩解压
-    implementation libs.libarchive
-
     //apache
     implementation(libs.commons.text)
 
@@ -253,8 +287,4 @@ dependencies {
 
     //com.github.AmrDeveloper:CodeView代码编辑已集成到应用内
     //epubLib集成到应用内
-    // sora-editor代码编辑器,更丰富的编辑功能
-    implementation(platform(libs.soraEditor.bom))
-    implementation(libs.soraEditor.core)
-    implementation(libs.soraEditor.language.textmate)
 }

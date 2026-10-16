@@ -22,10 +22,6 @@
 # 混合时不使用大小写混合，混合后的类名为小写
 -dontusemixedcaseclassnames
 
-# 这句话能够使我们的项目混淆后产生映射文件
-# 包含有类名->混淆后类名的映射关系
--verbose
-
 # 保留Annotation不混淆
 -keepattributes *Annotation*,InnerClasses
 
@@ -141,27 +137,6 @@ cn.hutool.core.util.**{*;}
 -keepnames class * extends java.lang.Throwable
 -keepclassmembernames,allowobfuscation class * extends java.lang.Throwable{*;}
 
-# Sora Editor
--keep class org.eclipse.tm4e.** { *; }
--keep class org.joni.** { *; }
-
-# GSYVideoPlayer
--keep class com.shuyu.gsyvideoplayer.** { *; }
--dontwarn com.shuyu.gsyvideoplayer.**
-#-keep class com.shuyu.gsyvideoplayer.video.** { *; }
-#-dontwarn com.shuyu.gsyvideoplayer.video.**
-#-keep class com.shuyu.gsyvideoplayer.video.base.** { *; }
-#-dontwarn com.shuyu.gsyvideoplayer.video.base.**
-#-keep class com.shuyu.gsyvideoplayer.utils.** { *; }
-#-dontwarn com.shuyu.gsyvideoplayer.utils.**
-#-keep class com.shuyu.gsyvideoplayer.player.** {*;}
-#-dontwarn com.shuyu.gsyvideoplayer.player.**
-#-keep class tv.danmaku.ijk.** { *; }
-#-dontwarn tv.danmaku.ijk.**
-#-keep class androidx.media3.** {*;}
-#-keep interface androidx.media3.**
-#-keep class com.shuyu.alipay.** {*;}
-#-keep interface com.shuyu.alipay.**
 -keep public class * extends android.view.View{
     *** get*();
     void set*(***);

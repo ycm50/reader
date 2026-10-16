@@ -24,7 +24,6 @@ import io.legado.app.help.source.getSourceType
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.QueryTTF
-import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.EncodingDetect
@@ -35,7 +34,6 @@ import io.legado.app.utils.JsURL
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.UrlUtil
-import io.legado.app.utils.compress.LibArchiveUtils
 import io.legado.app.utils.createFileReplace
 import io.legado.app.utils.externalCache
 import io.legado.app.utils.fromJsonObject
@@ -727,11 +725,8 @@ interface JsExtensions : JsEncodeUtils {
      */
     @JavascriptInterface
     fun unArchiveFile(zipPath: String): String {
-        if (zipPath.isEmpty()) return ""
-        val zipFile = getFile(zipPath)
-        return ArchiveUtils.deCompress(zipFile.absolutePath).let {
-            ArchiveUtils.TEMP_FOLDER_NAME + File.separator + MD5Utils.md5Encode16(zipFile.name)
-        }
+        // 压缩包（zip/rar/7z）解压功能已移除（原实现依赖 libarchive 原生库），返回空表示失败
+        return ""
     }
 
     /**
@@ -850,15 +845,8 @@ interface JsExtensions : JsEncodeUtils {
      * @return Rar指定文件的数据
      */
     fun getRarByteArrayContent(url: String, path: String): ByteArray? {
-        val bytes = if (url.isAbsUrl()) {
-            AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
-        } else {
-            HexUtil.decodeHex(url)
-        }
-
-        return ByteArrayInputStream(bytes).use {
-            LibArchiveUtils.getByteArrayContent(it, path)
-        }
+        // 压缩包解压功能已移除（原实现依赖 libarchive 原生库）
+        return null
     }
 
     /**
@@ -868,15 +856,8 @@ interface JsExtensions : JsEncodeUtils {
      * @return 7zip指定文件的数据
      */
     fun get7zByteArrayContent(url: String, path: String): ByteArray? {
-        val bytes = if (url.isAbsUrl()) {
-            AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
-        } else {
-            HexUtil.decodeHex(url)
-        }
-
-        return ByteArrayInputStream(bytes).use {
-            LibArchiveUtils.getByteArrayContent(it, path)
-        }
+        // 压缩包解压功能已移除（原实现依赖 libarchive 原生库）
+        return null
     }
 
 

@@ -49,3 +49,12 @@ Thumbs.db
 # Cross-drive symlink artifacts
 /a/
 /tmp/
+# JVM 崩溃/堆转储（gradle.properties 开启了 HeapDumpOnOutOfMemoryError，会落在仓库根目录）
+*.hprof
+hs_err_pid*.log
+replay_pid*.log
+# 旧版 CI 在仓库根目录临时生成的签名文件
+/release.keystore
+# 内置公开签名密钥：故意提交到版本库（供 CI 与任何人构建出可互相覆盖安装的 APK），
+# 因此必须放在上面 *.jks / *.keystore 规则之后做反向放行，不要删掉这一行。
+!keystore/legado-release.jks

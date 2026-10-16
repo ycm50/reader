@@ -26,6 +26,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # app/build.gradle 用 `git rev-list HEAD --count` 生成 versionCode。
+          # 默认的 fetch-depth: 1 会让它算成 1（versionCode 从 30008 掉到 30001），
+          # 结果 CI 包的 versionCode 小于本地包，无法覆盖安装。
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -34,34 +39,68 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        # 必须用 v4：v3 的 packages 默认值是 'tools platform-tools'，而 legacy 的 "tools" 包
+        # 已从 SDK 仓库移除，sdkmanager 会报 "Warning: Failed to find package 'tools'" 并以
+        # exit code 1 结束，job 卡死在这一步（run #38860089199 即此原因，日志里能看到
+        # `/…/cmdline-tools/16.0/bin/sdkmanager tools`）。
+        # v4 的默认值已改为 'platform-tools'，且 runs.using 为 node24（没有 Node 20 弃用警告）。
+        uses: android-actions/setup-android@v4
+        with:
+          # 仍显式声明需要的包，保证构建环境确定；build-tools 等缺失项由 AGP 自动下载
+          # （该 action 默认会执行 sdkmanager --licenses，自动下载所需的许可已接受）。
+          packages: 'platform-tools platforms;android-36'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Generate keystore for APK signing
-        run: |
-          keytool -genkey -v -keystore release.keystore -alias release \
-            -keyalg RSA -keysize 2048 -validity 3650 \
-            -storepass legado -keypass legado \
-            -dname "CN=Legado, OU=Dev, O=Legado, L=City, ST=State, C=CN"
-          echo "KEYSTORE_PATH=${{ github.workspace }}/release.keystore" >> $GITHUB_ENV
-          echo "KEYSTORE_PASSWORD=legado" >> $GITHUB_ENV
-          echo "KEY_ALIAS=release" >> $GITHUB_ENV
-          echo "KEY_PASSWORD=legado" >> $GITHUB_ENV
+      - name: Verify bundled signing keystore
+        # 使用仓库内置的公开密钥 keystore/legado-release.jks（密码 123456 / alias legado）。
+        # app/build.gradle 在未提供 RELEASE_STORE_* 属性时会自动用它给 release/debug 签名。
+        run: test -f keystore/legado-release.jks
 
       - name: Build Release APK (${{ inputs.arch }})
-        run: ./gradlew assembleRelease -Pandroid.injected.abifilters=${{ inputs.arch }} --no-configuration-cache --parallel
+        # 注意：-Pandroid.injected.abifilters 不是 AGP 支持的属性（AGP 只认 android.injected.build.abi），
+        # 之前该参数被静默忽略，四种架构选项产出的其实是同一个 universal APK。
+        # 现在改为项目自定义属性 -Pabi，由 app/build.gradle 的 targetAbis 读取（默认 arm64-v8a）。
+        run: ./gradlew assembleRelease -Pabi=${{ inputs.arch }} --no-configuration-cache --parallel
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Rename APK
+      - name: Locate & rename APK
+        # 本项目带 product flavor，release 产物真实路径是
+        #   app/build/outputs/apk/app/release/legado_app_<version>.apk
+        # 而 Actions 的 glob 里 `*` 不跨目录，原来的 `files: app/*/release/...`
+        # 只能匹配 app/build/release/...，永远匹配不到真正的产物，
+        # 于是会出现「Release 创建了但没有 APK 附件」。
+        # 这里把真实路径写进 GITHUB_ENV，上传步骤直接引用它。
         run: |
-          apk=$(find app/ -name "*.apk" | head -1)
+          apk=$(find app/build/outputs/apk -name "*.apk" -path "*release*" -printf "%T@ %p\n" \
+                 | sort -nr | head -1 | cut -d' ' -f2-)
+          if [ -z "$apk" ]; then
+            echo "::error::未找到 release APK，构建可能失败或被跳过"
+            exit 1
+          fi
           echo "Found APK: $apk"
           dir=$(dirname "$apk")
-          mv "$apk" "$dir/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk"
-          echo "APK_DIR=$dir" >> $GITHUB_ENV
+          target="$dir/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk"
+          mv "$apk" "$target"
+          echo "APK_PATH=$target" >> "$GITHUB_ENV"
+          ls -lh "$target"
+
+      - name: Verify APK (ABI / signature / size)
+        # 断言产物只含目标 ABI 且已用仓库内置密钥签名，避免发出坏包
+        run: |
+          echo "=== APK 内的原生库 ==="
+          unzip -l "$APK_PATH" | grep -E "lib/" || echo "(无原生库)"
+          echo "=== 签名证书 ==="
+          APKSIGNER=$(ls -1 "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs "$APK_PATH" | head -5
+          else
+            echo "(未找到 apksigner，跳过签名校验；不影响发布)"
+          fi
+          echo "=== 文件 ==="
+          ls -lh "$APK_PATH"
 
       - name: Create Release & Upload APK
         uses: softprops/action-gh-release@v2
@@ -77,4 +116,4 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-          files: app/*/release/Legado-${{ inputs.tag }}-${{ inputs.arch }}.apk
+          files: ${{ env.APK_PATH }}

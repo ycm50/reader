@@ -2,12 +2,20 @@ package io.legado.app.utils
 
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
-import io.legado.app.constant.AppPattern.archiveFileRegex
-import io.legado.app.utils.compress.LibArchiveUtils
+import io.legado.app.constant.AppPattern
 import splitties.init.appCtx
 import java.io.File
 
-/* 自动判断压缩文件后缀 然后再调用具体的实现 */
+/**
+ * 压缩包导入功能已移除。
+ *
+ * 原实现依赖 `me.zhanghai.android.libarchive`，该 AAR 为 4 个 ABI 各带一个 1.5–2.4MB 的原生库
+ * （`libarchive-jni.so`，arm64 单个 1.94MB），是安装包体积的主要来源之一。
+ *
+ * 这里保留原有的 API 形状（调用方无需改动即可继续编译），但**不再具备任何解压能力**：
+ * - [isArchive] 仍按后缀识别 zip/rar/7z，让导入流程能给出“不支持压缩包”的友好提示；
+ * - [deCompress] / [getArchiveFilesName] 统一返回空集合，调用方原有的“空结果”分支会给出提示。
+ */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 object ArchiveUtils {
 
@@ -22,89 +30,40 @@ object ArchiveUtils {
         archiveUri: Uri,
         path: String = TEMP_PATH,
         filter: ((String) -> Boolean)? = null
-    ): List<File> {
-        return deCompress(FileDoc.fromUri(archiveUri, false), path, filter)
-    }
+    ): List<File> = emptyList()
 
     fun deCompress(
         archivePath: String,
         path: String = TEMP_PATH,
         filter: ((String) -> Boolean)? = null
-    ): List<File> {
-        return deCompress(Uri.parse(archivePath), path, filter)
-    }
+    ): List<File> = emptyList()
 
     fun deCompress(
         archiveFile: File,
         path: String = TEMP_PATH,
         filter: ((String) -> Boolean)? = null
-    ): List<File> {
-        return deCompress(FileDoc.fromFile(archiveFile), path, filter)
-    }
+    ): List<File> = emptyList()
 
     fun deCompress(
         archiveDoc: DocumentFile,
         path: String = TEMP_PATH,
         filter: ((String) -> Boolean)? = null
-    ): List<File> {
-        return deCompress(FileDoc.fromDocumentFile(archiveDoc), path, filter)
-    }
+    ): List<File> = emptyList()
 
     fun deCompress(
         archiveFileDoc: FileDoc,
         path: String = TEMP_PATH,
         filter: ((String) -> Boolean)? = null
-    ): List<File> {
-        if (archiveFileDoc.isDir) throw IllegalArgumentException("Unexpected Folder input")
-        val name = archiveFileDoc.name
-        checkAchieve(name)
-        val workPathFileDoc = getCacheFolderFileDoc(name, path)
-        val workPath = workPathFileDoc.toString()
-
-        return archiveFileDoc.openReadPfd().getOrThrow().use {
-            LibArchiveUtils.unArchive(it, File(workPath), filter)
-        }
-
-    }
+    ): List<File> = emptyList()
 
     /* 遍历目录获取文件名 */
     fun getArchiveFilesName(fileUri: Uri, filter: ((String) -> Boolean)? = null): List<String> =
-        getArchiveFilesName(FileDoc.fromUri(fileUri, false), filter)
+        emptyList()
 
-
-    fun getArchiveFilesName(
-        fileDoc: FileDoc,
-        filter: ((String) -> Boolean)? = null
-    ): List<String> {
-        val name = fileDoc.name
-        checkAchieve(name)
-
-        return fileDoc.openReadPfd().getOrThrow().use {
-            try {
-                LibArchiveUtils.getFilesName(it, filter)
-            } catch (e: Exception) {
-                emptyList()
-            }
-
-        }
-
-
-    }
+    fun getArchiveFilesName(fileDoc: FileDoc, filter: ((String) -> Boolean)? = null): List<String> =
+        emptyList()
 
     fun isArchive(name: String): Boolean {
-        return archiveFileRegex.matches(name)
-    }
-
-    private fun checkAchieve(name: String) {
-        if (!isArchive(name))
-            throw IllegalArgumentException("Unexpected file suffix: Only 7z rar zip Accepted")
-    }
-
-    private fun getCacheFolderFileDoc(
-        archiveName: String,
-        workPath: String
-    ): FileDoc {
-        return FileDoc.fromUri(Uri.parse(workPath), true)
-            .createFolderIfNotExist(MD5Utils.md5Encode16(archiveName))
+        return AppPattern.archiveFileRegex.matches(name)
     }
 }
